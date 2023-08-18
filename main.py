@@ -34,7 +34,6 @@ def train(opt):
         optimizer_classifier = torch.optim.SGD(model.classifier.parameters(), lr=opt.LR, weight_decay=1e-4)
         optimizer_classifier.load_state_dict(temp_variances['optimizer_classifier'])
 
-
         scheduler_shared_encoder = torch.optim.lr_scheduler.MultiStepLR(optimizer_shared_encoder, opt.MILESTONES,
                                                                 gamma=opt.LR_DECAY_RATE)
         scheduler_shared_encoder.load_state_dict(temp_variances['scheduler_shared_encoder'])
@@ -102,7 +101,7 @@ def train(opt):
             l_reg = regularization(all_out)
             l_cro = criterion(preds, labels.long())
 
-            loss = l_cro + opt.ALPHA * (l_ort1 + l_ort2) + opt.BETA * l_sim - opt.DETA * l_reg
+            loss = l_cro + opt.ALPHA * (l_ort1 + l_ort2) + opt.BETA * l_sim + opt.DETA * l_reg
 
             print("[Train] [l_ort1 %f] [l_ort2 %f] [l_sim %f] [l_reg %f] [l_cro %f]" % (
                 (opt.ALPHA * l_ort1), (opt.ALPHA * l_ort2), (opt.BETA * l_sim), (opt.DETA * l_reg), l_cro))
@@ -157,7 +156,7 @@ def train(opt):
 
             l_cro = criterion(preds, labels.long())
 
-            loss = l_cro + opt.ALPHA * (l_ort1 + l_ort2) + opt.BETA * l_sim - opt.DETA * l_reg
+            loss = l_cro + opt.ALPHA * (l_ort1 + l_ort2) + opt.BETA * l_sim + opt.DETA * l_reg
 
             preds = preds.max(1)[1].cpu().detach().numpy()
             labels = labels.cpu().detach().numpy()
@@ -233,12 +232,12 @@ def evaluate(opt):
     return model, usable_gpu
 
 
-def compute(opt, model, usable_gpu):
+def compute(opt, model, usable_gpu, TRAIN):
     model.eval()
     # criterion = nn.CrossEntropyLoss()
     cuda = True if torch.cuda.is_available() else False
 
-    v_acc, v_f1 = get_data(opt, model, usable_gpu)
+    v_acc, v_f1 = get_data(opt, model, usable_gpu, TRAIN)
 
     initial_time = time.strftime('%Y-%m-%d %H:%M:%S ', time.localtime(time.time()))
     log_file = open(opt.LOG_SAVE_NAME, 'a')
@@ -257,7 +256,7 @@ if __name__ == '__main__':
     # TRAIN = False
     alpha = 0.02
     beta = 0.8
-    deta = 0.00002
+    deta = 0.002
 
     if data_selected == 0: data_name = MethodConfig.Phototriage
 
@@ -282,13 +281,13 @@ if __name__ == '__main__':
     if TRAIN:
         model, use_gpu = train(opt)
         with torch.no_grad():
-            v_acc, v_f1 = compute(opt, model, use_gpu)
+            v_acc, v_f1 = compute(opt, model, use_gpu, TRAIN)
         print(v_acc)
         print(v_f1)
     else:
         model, use_gpu = evaluate(opt)
         with torch.no_grad():
-            v_acc, v_f1 = compute(opt, model, use_gpu)
+            v_acc, v_f1 = compute(opt, model, use_gpu, TRAIN)
 
         print(v_acc)
         print(v_f1)
